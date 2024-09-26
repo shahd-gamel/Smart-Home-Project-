@@ -26,7 +26,8 @@
 #define No '-'
 #define ExitKey '/'
 #define C 'c'
-
+#define bac '1'
+#define exi '2'
 
 int main(void)
 {	CLCD_init() ;
@@ -49,31 +50,29 @@ int main(void)
 	void doorbell_function(void) {
 		U8 z;
 		
-		DIO_enumGetPinValue(DIO_PORTD, DIO_PIN5, &z); 
+		DIO_enumGetPinValue(DIO_PORTD, DIO_PIN5, &z);
 
-		if (z == DIO_LOW) 
-		{ 
+		if (z == DIO_LOW)
+		{
 			DIO_enumSetPinValue(DIO_PIN4, DIO_PORTD, DIO_HIGH);
 			CLCD_GoTo(1, 2);
 			CLCD_SendString("Doorbell Ringing");
 			_delay_ms(1000) ;
-			CLCD_CLR() ; 
-			} 
-			else if (z == DIO_HIGH)
-			{ 
+			CLCD_CLR() ;
+		}
+		else if (z == DIO_HIGH)
+		{
 			
-			DIO_enumSetPinValue(DIO_PIN4, DIO_PORTD, DIO_LOW); 
-			
-			
+			DIO_enumSetPinValue(DIO_PIN4, DIO_PORTD, DIO_LOW);
 		}
 	}
 	U8 check_heat_alert(void) {
 		U16 result = ADC_u16GetChannalResult(ADC_CHANNAL_4);
 		U8 *alert = " Heat Alert" ;
-		U16 temp = (result*500UL)/ (1023) ; 
+		U16 temp = (result*500UL)/ (1023) ;
 		if (temp > 30 ) {
 			DIO_enumSetPinValue(DIO_PIN3, DIO_PORTD, DIO_HIGH);
-			DIO_enumSetPinValue(DIO_PIN4, DIO_PORTD, DIO_HIGH);
+			DIO_enumSetPinValue(DIO_PIN5, DIO_PORTA, DIO_HIGH);
 			CLCD_CLR();
 			CLCD_GoTo(1, 2);
 			CLCD_SendString(alert);
@@ -85,7 +84,7 @@ int main(void)
 			}
 			
 			DIO_enumSetPinValue(DIO_PIN3, DIO_PORTD, DIO_LOW);
-			DIO_enumSetPinValue(DIO_PIN4, DIO_PORTD, DIO_LOW);
+			DIO_enumSetPinValue(DIO_PIN5, DIO_PORTA, DIO_LOW);
 			CLCD_CLR();
 			return key ;
 		}
@@ -94,6 +93,8 @@ int main(void)
 	
 	U8 *wel = "\r\nWelcome\r\n" ;
 	U8 *ID = "Enter Your ID :\r\n ";
+	U8 *user1 = "Hello User 1 \r\n" ;
+	U8 *user2 = "Hello User 2 \r\n " ;
 	U8 *pass = "\r\nEnter Password :\r\n " ;
 	U8 *clo = "\r\nSystem Closed\r\n" ;
 	U8 *try_again_msg = "Wrong ID. Try again? (+)Yes (-)No";
@@ -110,7 +111,7 @@ int main(void)
 	U8 *fanoff = "2-Fan Off ";
 	U8 *fan_turn = " Fan is Turning ";
 	U8 *fan_off = " Fan Off " ;
-	U8 *back = "3- Back" ;
+	U8 *back = "3- Back\r\n" ;
 	U8 *star = '*' ;
 
 	
@@ -139,9 +140,9 @@ int main(void)
 		{ x = 'f' ;
 			while (x =='f')
 			{   if (check_heat_alert() == C)
-			{
-				goto welc ;
-			}
+				{
+					goto welc ;
+				}
 				doorbell_function() ;
 				x = Kypad_GetKey() ;
 			}
@@ -204,18 +205,37 @@ int main(void)
 			_delay_ms(200) ;
 		}
 		entered_pass[3] = '\0';
-		if (strcmp((char*)entered_pass, PASS1) == 0 || strcmp((char*)entered_pass, PASS2) == 0)
+		if (strcmp((char*)entered_id, ID1) == 0)
 		{
-			valid_pass = 1;
-			break;
+			if (strcmp((char*)entered_pass, PASS1) == 0 )
+			{
+				USART_VoidSendString("\r\nAccess For User 1\r\n ") ;
+				valid_pass = 1;
+				break;
+			}
+			else 
+			{
+				USART_VoidSendString(wpass) ;
+				password_attempts++;
+				_delay_ms(500);
+			}
 		}
-		else
+		else if (strcmp((char*)entered_id, ID2) == 0)
 		{
-
-			USART_VoidSendString(wpass);
+			if (strcmp((char*)entered_pass, PASS2) == 0)
+			{
+				USART_VoidSendString("\r\nAccess For User 2\r\n ") ;
+				valid_pass = 1;
+				break;
+			}
+			else 
+		{
+			USART_VoidSendString(wpass) ;
 			password_attempts++;
 			_delay_ms(500);
 		}
+		}
+		
 		if (password_attempts >=3)
 		{
 			USART_VoidSendString(clo);
@@ -223,7 +243,7 @@ int main(void)
 	}
 	if (valid_pass)
 	
-	{	
+	{
 		doorbell_function() ;
 		check_heat_alert() ;
 		room_selection :
@@ -231,7 +251,7 @@ int main(void)
 		USART_VoidSendString(rom2) ;
 		room_choice ='f' ;
 		while (room_choice == 'f')
-		{ 
+		{
 			room_choice = Kypad_GetKey();
 			if (check_heat_alert() == C)
 			{
@@ -248,7 +268,7 @@ int main(void)
 		}
 		if (room_choice == Room1)
 		{
-			
+			Room_1 :
 			CLCD_GoTo(1,2);
 			CLCD_SendString(" Room 1 ") ;
 			USART_VoidSendString(led_msg) ;
@@ -273,8 +293,10 @@ int main(void)
 			}
 			if (room1_choice ==Led)
 			{
-				USART_VoidSendString(led_on);
+				Led1_selection : USART_VoidSendString(led_on);
 				USART_VoidSendString(led_off) ;
+				USART_VoidSendString(back);
+				
 				
 				U8 led_choice ='f' ;
 				while (led_choice=='f')
@@ -293,6 +315,30 @@ int main(void)
 					CLCD_GoTo(2,1);
 					CLCD_SendString(ledon) ;
 					DIO_enumSetPinValue(DIO_PIN0 , DIO_PORTA , DIO_HIGH) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString(" 2- EXIT ") ;
+					while (s =='f')
+					{ s = Kypad_GetKey() ;
+						
+						if (s == exi) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return ;
+							
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Led1_selection ;
+							return ;
+						}
+					}
+					
 				}
 				else if (led_choice == Off)
 				{
@@ -300,15 +346,42 @@ int main(void)
 					CLCD_GoTo(2,1);
 					CLCD_SendString(ledoff) ;
 					DIO_enumSetPinValue(DIO_PIN0 , DIO_PORTA , DIO_LOW) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						
+						if (s == exi) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return ;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Led1_selection ;
+						}
+					}
+				}
+				else if (led_choice == Back)
+				{
+					CLCD_CLR();
+					goto Room_1 ;
 				}
 				
 			}
 			
 			else if (room1_choice == Fan)
 			{
-				
+				Fan1_selection :
 				USART_VoidSendString(fanon) ;
 				USART_VoidSendString(fanoff) ;
+				USART_VoidSendString(back);
 				
 				U8 fan_choice = 'f' ;
 				while (fan_choice=='f')
@@ -325,12 +398,58 @@ int main(void)
 					CLCD_GoTo(2,1) ;
 					CLCD_SendString(fan_turn) ;
 					DIO_enumSetPinValue(DIO_PIN1 , DIO_PORTA , DIO_HIGH) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s == exi ) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac )
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Fan1_selection ;
+						}
+						
+					}
 				}
 				else if (fan_choice == Off)
 				{
 					CLCD_GoTo( 2,1 ) ;
 					CLCD_SendString(fan_off) ;
 					DIO_enumSetPinValue(DIO_PIN1 , DIO_PORTA , DIO_LOW) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s == exi ) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Fan1_selection ;
+						}
+					}
+				}
+				else if (fan_choice == Back)
+				{
+					CLCD_CLR();
+					goto Room_1 ;
 				}
 				
 			}
@@ -342,7 +461,7 @@ int main(void)
 		}
 		else if (room_choice == Room2)
 		{
-			
+			Room_2 :
 			CLCD_GoTo(1,2);
 			CLCD_SendString(" Room 2 ") ;
 			USART_VoidSendString(led_msg) ;
@@ -360,9 +479,10 @@ int main(void)
 			}
 			if (room2_choice ==Led)
 			{
-				
+				Led2_selection  :
 				USART_VoidSendString(led_on);
 				USART_VoidSendString(led_off) ;
+				USART_VoidSendString(back);
 				
 				U8 led_choice ='f' ;
 				while (led_choice=='f')
@@ -380,6 +500,26 @@ int main(void)
 					CLCD_GoTo(2,1);
 					CLCD_SendString(ledon) ;
 					DIO_enumSetPinValue(DIO_PIN2 , DIO_PORTA , DIO_HIGH) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s == exi) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Led2_selection ;
+						}
+					}
 				}
 				else if (led_choice == Off)
 				{
@@ -387,15 +527,41 @@ int main(void)
 					CLCD_GoTo(2,1);
 					CLCD_SendString(ledoff) ;
 					DIO_enumSetPinValue(DIO_PIN2 , DIO_PORTA , DIO_LOW) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s ==exi ) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Led2_selection ;
+						}
+					}
+				}
+				else if (led_choice == Back)
+				{
+					CLCD_CLR();
+					goto Room_2  ;
 				}
 				
 			}
 			
 			else if (room2_choice == Fan)
 			{
-				
+				Fan2_selection :
 				USART_VoidSendString(fanon) ;
 				USART_VoidSendString(fanoff) ;
+				USART_VoidSendString(back);
 				
 				U8 fan_choice = 'f' ;
 				while (fan_choice=='f')
@@ -412,12 +578,57 @@ int main(void)
 					CLCD_GoTo(2,1) ;
 					CLCD_SendString(fan_turn) ;
 					DIO_enumSetPinValue(DIO_PIN3 , DIO_PORTA , DIO_HIGH) ;
+					_delay_ms(1500);
+					U8 s = 'f ' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s == exi)  {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Fan2_selection ;
+						}
+					}
 				}
 				else if (fan_choice == Off)
 				{
 					CLCD_GoTo( 2,1 ) ;
 					CLCD_SendString(fan_off) ;
 					DIO_enumSetPinValue(DIO_PIN3 , DIO_PORTA , DIO_LOW) ;
+					_delay_ms(1500);
+					U8 s = 'f' ;
+					USART_VoidSendString("\r\n1-Back ") ;
+					USART_VoidSendString("2- EXIT\r\n ") ;
+					while ( s == 'f')
+					{ s = Kypad_GetKey() ;
+						if (s == exi) {
+							CLCD_CLR() ;
+							USART_VoidSendString(wel) ;
+							_delay_ms(1000);
+							goto Id ;
+							return;
+						}
+						else if (s == bac)
+						{
+							CLCD_GoTo(2,1) ;
+							CLCD_SendString("                              ") ;
+							goto Fan2_selection ;
+						}
+					}
+				}
+				else if (fan_choice == Back)
+				{
+					CLCD_CLR();
+					goto Room_2 ;
 				}
 				
 			}
